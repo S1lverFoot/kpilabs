@@ -1,0 +1,37 @@
+erDiagram
+    Customer {
+        UUID CustomerID PK
+        string FirstName
+        string LastName
+        string Email
+        string PhoneNumber
+    }
+    Category {
+        UUID CategoryID PK
+        string CategoryName
+    }
+    Product {
+        UUID ProductID PK
+        string Name
+        decimal Price
+        int StockQuantity
+        UUID CategoryID FK
+    }
+    Order {
+        UUID OrderID PK
+        datetime OrderDate
+        string Status
+        UUID CustomerID FK
+    }
+    Order_Item {
+        UUID OrderItemID PK
+        UUID OrderID FK
+        UUID ProductID FK
+        int Quantity
+        decimal UnitPrice
+    }
+
+    Customer ||--o{ Order : "places"
+    Category ||--o{ Product : "contains"
+    Order ||--|{ Order_Item : "includes"
+    Product ||--o{ Order_Item : "is sold as"
