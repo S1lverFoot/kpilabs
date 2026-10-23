@@ -7,7 +7,6 @@ actor "Гість" as Guest
 actor "Зареєстрований клієнт" as Customer
 actor "Банківська система" as Bank
 
-' Узагальнення (успадкування) акторів
 Guest -up-|> User
 Customer -up-|> User
 
@@ -22,11 +21,8 @@ User --> UC1
 Customer --> UC2
 Customer --> UC4
 
-' Оплата включає (include) Оформлення замовлення
 UC3 .> UC2 : <<include>>
-' Оформлення замовлення вимагає авторизації
 UC2 .> UC4 : <<include>>
 
-' Зовнішній актор викликає процес оплати
 Bank --> UC3
 @enduml
