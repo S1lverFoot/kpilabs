@@ -1,37 +1,35 @@
 erDiagram
     Customer {
-        UUID CustomerID PK
-        string FirstName
-        string LastName
-        string Email
-        string PhoneNumber
+        string id PK "UUID"
+        string name
+        string email
     }
     Category {
-        UUID CategoryID PK
-        string CategoryName
+        string id PK "UUID"
+        string name
     }
     Product {
-        UUID ProductID PK
-        string Name
-        decimal Price
-        int StockQuantity
-        UUID CategoryID FK
+        string id PK "UUID"
+        string category_id FK "UUID"
+        string name
+        float price
+        int stock_quantity
     }
     Order {
-        UUID OrderID PK
-        datetime OrderDate
-        string Status
-        UUID CustomerID FK
+        string id PK "UUID"
+        string customer_id FK "UUID"
+        string status
+        datetime created_at
     }
     Order_Item {
-        UUID OrderItemID PK
-        UUID OrderID FK
-        UUID ProductID FK
-        int Quantity
-        decimal UnitPrice
+        string id PK "UUID"
+        string order_id FK "UUID"
+        string product_id FK "UUID"
+        int quantity
+        float unit_price
     }
 
-    Customer ||--o{ Order : "places"
-    Category ||--o{ Product : "contains"
-    Order ||--|{ Order_Item : "includes"
-    Product ||--o{ Order_Item : "is sold as"
+    Category ||--o{ Product : contains
+    Customer ||--o{ Order : places
+    Order ||--|{ Order_Item : includes
+    Product ||--o{ Order_Item : ordered_in
