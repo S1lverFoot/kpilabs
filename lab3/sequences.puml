@@ -1,0 +1,177 @@
+@startuml scenario1_success_payment
+title Сценарій 1: Успішна оплата замовлення
+autonumber
+
+actor "Зареєстрований клієнт" as Customer
+participant "StorefrontUI" as UI
+participant "OrderService" as OrderSvc
+participant "CatalogService" as CatSvc
+participant "PaymentGateway" as Gateway
+
+Customer -> UI : submitOrderAndPay(cartItems, 1000)
+activate UI
+
+UI -> OrderSvc : submitOrder(userId, cartItems)
+activate OrderSvc
+
+OrderSvc -> CatSvc : validateStockAndPrices(cartItems)
+activate CatSvc
+CatSvc --> OrderSvc : itemsWithPrices(available=true)
+deactivate CatSvc
+
+OrderSvc -> OrderSvc : createOrder(userId, "Очікування оплати")
+
+opt У каталозі є акційні товари (REQ-4)
+  OrderSvc -> OrderSvc : applyPromotionalDiscount(itemsWithPrices)
+end
+
+OrderSvc -> Gateway : authorizePayment(orderId, 1000)
+activate Gateway
+Gateway --> OrderSvc : paymentApproved(transactionId)
+deactivate Gateway
+
+alt Транзакцію підтверджено
+  loop Для кожної позиції замовлення
+    OrderSvc -> OrderSvc : fixHistoricalUnitPrice(orderItemId, unitPrice)
+    OrderSvc -> CatSvc : decrementProductStock(productId, quantity)
+    activate CatSvc
+    CatSvc --> OrderSvc : stockUpdated()
+    deactivate CatSvc
+  end
+  OrderSvc -> OrderSvc : updateOrderStatus(orderId, "Сплачено")
+  OrderSvc --> UI : orderPaidSuccess(orderId, "Сплачено")
+else Помилка фіксації оплати
+  OrderSvc -> OrderSvc : updateOrderStatus(orderId, "Очікування оплати")
+  OrderSvc --> UI : paymentPending(orderId)
+end
+
+deactivate OrderSvc
+UI --> Customer : showOrderConfirmed("Сплачено")
+deactivate UI
+@enduml
+
+@startuml scenario2_gateway_declined
+title Сценарій 2: Відмова шлюзу
+autonumber
+
+actor "Зареєстрований клієнт" as Customer
+participant "StorefrontUI" as UI
+participant "OrderService" as OrderSvc
+participant "CatalogService" as CatSvc
+participant "PaymentGateway" as Gateway
+
+Customer -> UI : clickPayOrder(orderId)
+activate UI
+
+UI -> OrderSvc : processPayment(orderId)
+activate OrderSvc
+
+OrderSvc -> CatSvc : lockOrderItems(orderId)
+activate CatSvc
+CatSvc --> OrderSvc : itemsLocked("Очікування оплати")
+deactivate CatSvc
+
+OrderSvc -> Gateway : authorizePayment(orderId, amount)
+activate Gateway
+Gateway --> OrderSvc : paymentDeclined("Declined")
+deactivate Gateway
+
+alt Банк відхилив транзакцію (Declined)
+  OrderSvc -> OrderSvc : keepOrderStatus(orderId, "Очікування оплати")
+  OrderSvc --> UI : paymentDeclinedError("Очікування оплати")
+else Помилка з'єднання зі шлюзом
+  OrderSvc -> OrderSvc : keepOrderStatus(orderId, "Очікування оплати")
+  OrderSvc --> UI : gatewayTimeoutError()
+end
+
+opt Повторна спроба оплати клієнтом
+  UI --> Customer : enableRetryPaymentButton(orderId)
+end
+
+deactivate OrderSvc
+UI --> Customer : showDeclinedWarning()
+deactivate UI
+@enduml
+
+@startuml scenario3_out_of_stock
+title Сценарій 3: Товару бракує на складі
+autonumber
+
+actor "Зареєстрований клієнт" as Customer
+participant "StorefrontUI" as UI
+participant "OrderService" as OrderSvc
+participant "CatalogService" as CatSvc
+
+Customer -> UI : submitCheckout(cartItems)
+activate UI
+
+UI -> OrderSvc : createOrder(userId, cartItems)
+activate OrderSvc
+
+loop Для кожного товару в кошику
+  OrderSvc -> CatSvc : checkAvailableStock(productId)
+  activate CatSvc
+  CatSvc --> OrderSvc : stockQuantity
+  deactivate CatSvc
+end
+
+alt Залишок хоча б одного товару == 0
+  OrderSvc -> OrderSvc : rejectOrderCreation("OutOfStock")
+  OrderSvc --> UI : orderRejectedOutOfStock(missingItems)
+else Усі товари є в наявності
+  OrderSvc -> OrderSvc : createPendingOrder(userId, "Очікування оплати")
+  OrderSvc --> UI : orderCreated(orderId)
+end
+
+opt Пошук доступних аналогів
+  UI -> CatSvc : findAvailableAlternatives(missingItems)
+  activate CatSvc
+  CatSvc --> UI : suggestedProducts
+  deactivate CatSvc
+end
+
+deactivate OrderSvc
+UI --> Customer : showOutOfStockWarning()
+deactivate UI
+@enduml
+
+@startuml scenario4_duplicate_click
+title Сценарій 4: Повторне натискання «Оплатити»
+autonumber
+
+actor "Зареєстрований клієнт" as Customer
+participant "StorefrontUI" as UI
+participant "OrderService" as OrderSvc
+participant "PaymentGateway" as Gateway
+
+Customer -> UI : clickPayButton(orderId, idempotencyKey)
+activate UI
+
+UI -> OrderSvc : initiatePayment(orderId, idempotencyKey)
+activate OrderSvc
+
+OrderSvc -> OrderSvc : checkTransactionState(orderId, idempotencyKey)
+
+alt Транзакція вже виконується (Processing)
+  OrderSvc -> OrderSvc : ignoreDuplicateClick(orderId, idempotencyKey)
+  OrderSvc --> UI : currentProcessingStatus("Processing")
+else Перший запит на оплату
+  OrderSvc -> OrderSvc : markOrderProcessing(orderId, "Processing")
+  OrderSvc -> Gateway : authorizePayment(orderId, amount)
+  activate Gateway
+  Gateway --> OrderSvc : paymentResult
+  deactivate Gateway
+  OrderSvc --> UI : paymentCompleted(paymentResult)
+end
+
+opt Повторне натискання під час очікування відповіді
+  UI -> OrderSvc : getPaymentStatus(orderId)
+  activate OrderSvc
+  OrderSvc --> UI : status("Processing")
+  deactivate OrderSvc
+end
+
+deactivate OrderSvc
+UI --> Customer : displayCurrentProcessingStatus()
+deactivate UI
+@enduml
