@@ -5,6 +5,7 @@ skinparam packageStyle rectangle
 actor "Користувач" as User
 actor "Гість" as Guest
 actor "Зареєстрований клієнт" as Customer
+actor "Адміністратор" as Admin
 
 Guest -up-|> User
 Customer -up-|> User
@@ -14,11 +15,13 @@ rectangle "Онлайн-магазин" {
     usecase "Оформлення замовлення" as UC2
     usecase "Оплата замовлення" as UC3
     usecase "Авторизація" as UC4
+    usecase "Керування товарами та акціями" as UC5
 }
 
 User --> UC1
 Customer --> UC2
 Customer --> UC4
+Admin --> UC5
 
 UC3 .> UC2 : <<include>>
 UC2 .> UC4 : <<include>>
