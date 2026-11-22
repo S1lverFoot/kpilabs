@@ -11,20 +11,18 @@ Guest -up-|> User
 Customer -up-|> User
 
 rectangle "Онлайн-магазин" {
-    usecase "Перегляд каталогу" as UC1
-    usecase "Оформлення замовлення" as UC2
-    usecase "Оплата замовлення" as UC3
-    usecase "Авторизація" as UC4
-    usecase "Керування товарами та акціями" as UC5
-    usecase "Отримання акційної знижки" as UC6
+    usecase "UC-1: Перегляд каталогу" as UC1
+    usecase "UC-2: Оформлення замовлення" as UC2
+    usecase "UC-3: Оплата замовлення" as UC3
+    usecase "UC-4: Керування каталогом та акціями" as UC4
+    usecase "UC-5: Вибір способу оплати" as UC5
 }
 
 User --> UC1
 Customer --> UC2
-Customer --> UC4
-Admin --> UC5
+Customer --> UC3
+Admin --> UC4
 
-UC3 .> UC2 : <<include>>
-UC2 .> UC4 : <<include>>
-UC6 .> UC2 : <<extend>>
+UC2 .> UC3 : <<include>>
+UC5 .> UC3 : <<extend>>
 @enduml
