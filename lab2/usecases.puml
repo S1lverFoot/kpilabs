@@ -16,6 +16,7 @@ rectangle "Онлайн-магазин" {
     usecase "Оплата замовлення" as UC3
     usecase "Авторизація" as UC4
     usecase "Керування товарами та акціями" as UC5
+    usecase "Отримання акційної знижки" as UC6
 }
 
 User --> UC1
@@ -25,4 +26,5 @@ Admin --> UC5
 
 UC3 .> UC2 : <<include>>
 UC2 .> UC4 : <<include>>
+UC6 .> UC2 : <<extend>>
 @enduml
